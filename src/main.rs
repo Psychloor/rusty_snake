@@ -1,4 +1,4 @@
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 
 use macroquad::prelude::*;
 
@@ -28,23 +28,19 @@ enum Direction {
 }
 
 struct GameState {
-    snake: LinkedList<Position>,
+    snake: VecDeque<Position>,
     extensions: u8,
     fruit_position: Position,
     score: u32,
-    game_over: bool,
-    score_text: String,
 }
 
 impl GameState {
     fn new() -> Self {
         Self {
-            snake: LinkedList::new(),
+            snake: VecDeque::new(),
             extensions: 2,
-            game_over: false,
-            score: 0,
             fruit_position: Position::default(),
-            score_text: format!("Score: {}", 0),
+            score: 0,
         }
     }
 
@@ -62,56 +58,39 @@ impl GameState {
         }
     }
 
-    fn move_direction(&mut self, direction: &Direction) {
+    fn move_direction(&mut self, direction: &Direction) -> bool {
         let current_position = self
             .snake
             .front()
             .expect("Snake should have at least 1 part before this method");
-        match direction {
-            Direction::None => todo!(),
-            Direction::Up => self
-                .snake
-                .push_front(Position::new(current_position.x, current_position.y - 1)),
-            Direction::Down => self
-                .snake
-                .push_front(Position::new(current_position.x, current_position.y + 1)),
-            Direction::Left => self
-                .snake
-                .push_front(Position::new(current_position.x - 1, current_position.y)),
-            Direction::Right => self
-                .snake
-                .push_front(Position::new(current_position.x + 1, current_position.y)),
-        }
+        let new_position = match direction {
+            Direction::None => return false,
+            Direction::Up => Position::new(current_position.x, current_position.y - 1),
+            Direction::Down => Position::new(current_position.x, current_position.y + 1),
+            Direction::Left => Position::new(current_position.x - 1, current_position.y),
+            Direction::Right => Position::new(current_position.x + 1, current_position.y),
+        };
 
-        if *self.snake.front().unwrap() == self.fruit_position {
+        self.snake.push_front(new_position);
+
+        if new_position == self.fruit_position {
             self.score += 1;
-            self.score_text = format!("Score: {}", self.score);
             self.extensions += 1;
 
             if self.snake.len() + 1 >= (WORLD_WIDTH * WORLD_HEIGHT) as usize {
-                self.game_over = true
+                return true;
             } else {
                 self.place_fruit();
             }
         }
 
-        let head_pos = self.snake.front().unwrap();
-        if head_pos.x < 0
-            || head_pos.x >= WORLD_WIDTH as i16
-            || head_pos.y < 0
-            || head_pos.y >= WORLD_HEIGHT as i16
+        if new_position.x < 0
+            || new_position.x >= WORLD_WIDTH as i16
+            || new_position.y < 0
+            || new_position.y >= WORLD_HEIGHT as i16
+            || self.collides_with_body(new_position.x, new_position.y, 1)
         {
-            self.game_over = true;
-            return;
-        }
-
-        if self.collides_with_body(
-            self.snake.front().unwrap().x,
-            self.snake.front().unwrap().y,
-            1,
-        ) {
-            self.game_over = true;
-            return;
+            return true;
         }
 
         if self.extensions > 0 {
@@ -119,31 +98,28 @@ impl GameState {
         } else {
             self.snake.pop_back();
         }
+
+        false
     }
 
-    fn body_parts(&self) -> std::collections::linked_list::Iter<'_, Position> {
+    fn body_parts(&self) -> std::collections::vec_deque::Iter<'_, Position> {
         self.snake.iter()
     }
 
     fn collides_with_body(&self, x: i16, y: i16, skip: usize) -> bool {
-        self.snake
-            .iter()
-            .skip(skip)
-            .any(|pos| pos.x == x && pos.y == y)
+        self.snake.iter().skip(skip).any(|pos| pos.x == x && pos.y == y)
     }
 
     fn reset(&mut self) {
-        self.snake.clear();
+                self.snake.clear();
         self.snake.push_front(Position::new(
             (WORLD_WIDTH / 2) as i16,
             (WORLD_HEIGHT / 2) as i16,
         ));
 
         self.extensions = 2;
-        self.game_over = false;
         self.place_fruit();
         self.score = 0;
-        self.score_text = format!("Score: {}", self.score);
     }
 }
 
@@ -158,13 +134,14 @@ async fn main() {
     let tile_height = screen_height() / WORLD_HEIGHT as f32;
 
     let mut time_since_move: f64 = 0f64;
+    let mut game_over = false;
 
     loop {
         if is_key_pressed(KeyCode::Escape) {
             break;
         }
 
-        if !game_state.game_over {
+        if !game_over {
             if is_key_pressed(KeyCode::Up) {
                 current_direction = Direction::Up
             }
@@ -180,14 +157,15 @@ async fn main() {
 
             if get_time() - time_since_move >= MOVE_SPEED && current_direction != Direction::None {
                 time_since_move = get_time();
-                game_state.move_direction(&current_direction)
+                game_over = game_state.move_direction(&current_direction);
             }
         }
 
-        if game_state.game_over && is_key_pressed(KeyCode::R) {
+        if game_over && is_key_pressed(KeyCode::R) {
             game_state.reset();
             current_direction = Direction::None;
             time_since_move = 0f64;
+            game_over = false;
         }
 
         // Rendering
@@ -211,9 +189,9 @@ async fn main() {
             RED,
         );
 
-        draw_text(&game_state.score_text, 16f32, 16f32, 24f32, WHITE);
+        draw_text(&format!("Score: {}", game_state.score), 16f32, 16f32, 24f32, WHITE);
 
-        if game_state.game_over {
+        if game_over {
             let game_over_text = "Game Over";
             let bounds = measure_text(game_over_text, None, 64, 1f32);
             draw_text(
@@ -225,6 +203,6 @@ async fn main() {
             );
         }
 
-        next_frame().await
+        next_frame().await;
     }
 }
