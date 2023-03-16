@@ -48,10 +48,8 @@ impl GameState {
         }
     }
 
-    fn place_fruit(&mut self) -> bool {
-        let max_tries = WORLD_WIDTH * WORLD_HEIGHT * 5;
-
-        for _ in 0..=max_tries {
+    fn place_fruit(&mut self) {
+        loop {
             let x = rand::gen_range(0, WORLD_WIDTH);
             let y = rand::gen_range(0, WORLD_HEIGHT);
 
@@ -60,10 +58,8 @@ impl GameState {
             }
 
             self.fruit_position = Position::new(x as i16, y as i16);
-            return true;
+            break;
         }
-
-        false
     }
 
     fn move_direction(&mut self, direction: &Direction) {
@@ -91,7 +87,12 @@ impl GameState {
             self.score += 1;
             self.score_text = format!("Score: {}", self.score);
             self.extensions += 1;
-            self.place_fruit();
+
+            if self.snake.len() + 1 >= (WORLD_WIDTH * WORLD_HEIGHT) as usize {
+                self.game_over = true
+            } else {
+                self.place_fruit();
+            }
         }
 
         let head_pos = self.snake.front().unwrap();
