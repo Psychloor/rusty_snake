@@ -107,11 +107,14 @@ impl GameState {
     }
 
     fn collides_with_body(&self, x: i16, y: i16, skip: usize) -> bool {
-        self.snake.iter().skip(skip).any(|pos| pos.x == x && pos.y == y)
+        self.snake
+            .iter()
+            .skip(skip)
+            .any(|pos| pos.x == x && pos.y == y)
     }
 
     fn reset(&mut self) {
-                self.snake.clear();
+        self.snake.clear();
         self.snake.push_front(Position::new(
             (WORLD_WIDTH / 2) as i16,
             (WORLD_HEIGHT / 2) as i16,
@@ -142,16 +145,16 @@ async fn main() {
         }
 
         if !game_over {
-            if is_key_pressed(KeyCode::Up) {
+            if is_key_pressed(KeyCode::Up) && current_direction != Direction::Down {
                 current_direction = Direction::Up
             }
-            if is_key_pressed(KeyCode::Down) {
+            if is_key_pressed(KeyCode::Down) && current_direction != Direction::Up {
                 current_direction = Direction::Down
             }
-            if is_key_pressed(KeyCode::Left) {
+            if is_key_pressed(KeyCode::Left) && current_direction != Direction::Right {
                 current_direction = Direction::Left
             }
-            if is_key_pressed(KeyCode::Right) {
+            if is_key_pressed(KeyCode::Right) && current_direction != Direction::Left {
                 current_direction = Direction::Right
             }
 
@@ -189,7 +192,13 @@ async fn main() {
             RED,
         );
 
-        draw_text(&format!("Score: {}", game_state.score), 16f32, 16f32, 24f32, WHITE);
+        draw_text(
+            &format!("Score: {}", game_state.score),
+            16f32,
+            16f32,
+            24f32,
+            WHITE,
+        );
 
         if game_over {
             let game_over_text = "Game Over";
@@ -203,6 +212,6 @@ async fn main() {
             );
         }
 
-        next_frame().await;
+        next_frame().await
     }
 }
