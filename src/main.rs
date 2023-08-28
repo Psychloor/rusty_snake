@@ -5,18 +5,11 @@ use macroquad::prelude::*;
 const WORLD_WIDTH: u32 = 25;
 const WORLD_HEIGHT: u32 = 18;
 const MOVE_SPEED: f64 = 1f64 / 8f64;
+const GAME_OVER_TEXT: &str = "Game Over";
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-struct Position {
-    pub x: i16,
-    pub y: i16,
-}
+use nalgebra::Vector2;
 
-impl Position {
-    fn new(x: i16, y: i16) -> Self {
-        Self { x, y }
-    }
-}
+type Position = Vector2<i16>;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Direction {
@@ -25,6 +18,18 @@ enum Direction {
     Down,
     Left,
     Right,
+}
+
+impl Direction {
+    fn is_opposite(&self, new_dir: Direction) -> bool {
+        match self {
+            Direction::None => false,
+            Direction::Up => new_dir == Direction::Down,
+            Direction::Down => new_dir == Direction::Up,
+            Direction::Left => new_dir == Direction::Right,
+            Direction::Right => new_dir == Direction::Left,
+        }
+    }
 }
 
 struct GameState {
@@ -126,52 +131,8 @@ impl GameState {
     }
 }
 
-#[macroquad::main("Rusty Snake V2")]
-async fn main() {
-    let mut game_state = GameState::new();
-    game_state.reset();
-
-    let mut current_direction = Direction::None;
-
-    let tile_width = screen_width() / WORLD_WIDTH as f32;
-    let tile_height = screen_height() / WORLD_HEIGHT as f32;
-
-    let mut time_since_move: f64 = 0f64;
-    let mut game_over = false;
-
-    loop {
-        if is_key_pressed(KeyCode::Escape) {
-            break;
-        }
-
-        if !game_over {
-            if is_key_pressed(KeyCode::Up) && current_direction != Direction::Down {
-                current_direction = Direction::Up
-            }
-            if is_key_pressed(KeyCode::Down) && current_direction != Direction::Up {
-                current_direction = Direction::Down
-            }
-            if is_key_pressed(KeyCode::Left) && current_direction != Direction::Right {
-                current_direction = Direction::Left
-            }
-            if is_key_pressed(KeyCode::Right) && current_direction != Direction::Left {
-                current_direction = Direction::Right
-            }
-
-            if get_time() - time_since_move >= MOVE_SPEED && current_direction != Direction::None {
-                time_since_move = get_time();
-                game_over = game_state.move_direction(&current_direction);
-            }
-        }
-
-        if game_over && is_key_pressed(KeyCode::R) {
-            game_state.reset();
-            current_direction = Direction::None;
-            time_since_move = 0f64;
-            game_over = false;
-        }
-
-        // Rendering
+fn render_game_state(game_state: &GameState, tile_width: f32, tile_height: f32, game_over: bool) {
+            // Rendering
         clear_background(BLACK);
 
         for part in game_state.body_parts() {
@@ -201,16 +162,63 @@ async fn main() {
         );
 
         if game_over {
-            let game_over_text = "Game Over";
-            let bounds = measure_text(game_over_text, None, 64, 1f32);
+            let bounds = measure_text(GAME_OVER_TEXT, None, 64, 1f32);
             draw_text(
-                game_over_text,
+                GAME_OVER_TEXT,
                 (screen_width() / 2f32) - (bounds.width / 2f32),
                 (screen_height() / 2f32) - (bounds.height / 2f32),
                 64f32,
                 WHITE,
             );
         }
+}
+
+#[macroquad::main("Rusty Snake V2")]
+async fn main() {
+    let mut game_state = GameState::new();
+    game_state.reset();
+
+    let mut current_direction = Direction::None;
+
+    let tile_width = screen_width() / WORLD_WIDTH as f32;
+    let tile_height = screen_height() / WORLD_HEIGHT as f32;
+
+    let mut time_since_move: f64 = 0f64;
+    let mut game_over = false;
+
+    loop {
+        if is_key_pressed(KeyCode::Escape) {
+            break;
+        }
+
+        if !game_over {
+            if is_key_pressed(KeyCode::Up) && !current_direction.is_opposite(Direction::Up) {
+                current_direction = Direction::Up
+            }
+            if is_key_pressed(KeyCode::Down) && !current_direction.is_opposite(Direction::Down) {
+                current_direction = Direction::Down
+            }
+            if is_key_pressed(KeyCode::Left) && !current_direction.is_opposite(Direction::Left) {
+                current_direction = Direction::Left
+            }
+            if is_key_pressed(KeyCode::Right) && !current_direction.is_opposite(Direction::Right) {
+                current_direction = Direction::Right
+            }
+
+            if get_time() - time_since_move >= MOVE_SPEED && current_direction != Direction::None {
+                time_since_move = get_time();
+                game_over = game_state.move_direction(&current_direction);
+            }
+        }
+
+        if game_over && is_key_pressed(KeyCode::R) {
+            game_state.reset();
+            current_direction = Direction::None;
+            time_since_move = 0f64;
+            game_over = false;
+        }
+
+        render_game_state(&game_state, tile_width, tile_height, game_over);
 
         next_frame().await
     }

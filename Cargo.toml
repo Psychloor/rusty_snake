@@ -8,3 +8,4 @@ publish = false
 
 [dependencies]
 macroquad = "0.3.25"
+nalgebra = "0.32.2"
