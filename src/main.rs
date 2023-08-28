@@ -21,13 +21,13 @@ enum Direction {
 }
 
 impl Direction {
-    fn is_opposite(&self, new_dir: Direction) -> bool {
+    fn new_direction_allowed(&self, new_dir: Direction) -> bool {
         match self {
-            Direction::None => false,
-            Direction::Up => new_dir == Direction::Down,
-            Direction::Down => new_dir == Direction::Up,
-            Direction::Left => new_dir == Direction::Right,
-            Direction::Right => new_dir == Direction::Left,
+            Direction::None => true,
+            Direction::Up => new_dir != Direction::Down,
+            Direction::Down => new_dir != Direction::Up,
+            Direction::Left => new_dir != Direction::Right,
+            Direction::Right => new_dir != Direction::Left,
         }
     }
 }
@@ -192,16 +192,16 @@ async fn main() {
         }
 
         if !game_over {
-            if is_key_pressed(KeyCode::Up) && !current_direction.is_opposite(Direction::Up) {
+            if is_key_pressed(KeyCode::Up) && current_direction.new_direction_allowed(Direction::Up) {
                 current_direction = Direction::Up
             }
-            if is_key_pressed(KeyCode::Down) && !current_direction.is_opposite(Direction::Down) {
+            if is_key_pressed(KeyCode::Down) && current_direction.new_direction_allowed(Direction::Down) {
                 current_direction = Direction::Down
             }
-            if is_key_pressed(KeyCode::Left) && !current_direction.is_opposite(Direction::Left) {
+            if is_key_pressed(KeyCode::Left) && current_direction.new_direction_allowed(Direction::Left) {
                 current_direction = Direction::Left
             }
-            if is_key_pressed(KeyCode::Right) && !current_direction.is_opposite(Direction::Right) {
+            if is_key_pressed(KeyCode::Right) && current_direction.new_direction_allowed(Direction::Right) {
                 current_direction = Direction::Right
             }
 
