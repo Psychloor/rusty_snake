@@ -9,3 +9,4 @@ publish = false
 [dependencies]
 macroquad = "0.3.25"
 nalgebra = "0.32.2"
+lazy_static = "1.4.0"
